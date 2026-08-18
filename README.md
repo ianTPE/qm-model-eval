@@ -112,7 +112,7 @@ changed a result here.
 
 | model | what failed |
 |---|---|
-| `claude-haiku-4-5` | no cron at all on Chinese prompts, 0/3 — 3/3 in English |
+| `claude-haiku-4-5` | reports success on Chinese prompts and does nothing. Six of seven runs wrong: most created no cron while replying 「建立完成。20 分鐘後會提醒你」; one scheduled the reminder 56 years in the past. 3/3 in English |
 | `openrouter/auto` | 0/3 Chinese, 2/3 English, and unattributable: it picks a model per request while `session_llm_requests` records only `openrouter/auto` |
 | `glm-5.3` | schedules the wrong time — 2/3 on time in English, 1/3 in Chinese, worst case 30 hours out; also slowest at 35–52s |
 
