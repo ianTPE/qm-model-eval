@@ -205,8 +205,8 @@ tokens are never measured at all.
 | model | input | output | calls/turn | median turn |
 |---|---|---|---|---|
 | `gpt-5.6-luna` | $0.20 | $1.20 | 3.1 | 14.0s |
-| `deepseek-v4-flash` | $0.44 | $1.32 | 2.3 | 12.2s |
-| `deepseek-v4-pro` | $1.32 | $3.96 | 2.3 | 15.4s |
+| `deepseek-v4-flash` | $0.22–0.44 | $0.66–1.32 | 2.3 | 12.2s |
+| `deepseek-v4-pro` | $0.66–1.32 | $1.98–3.96 | 2.3 | 15.4s |
 | `claude-sonnet-5` | $2 | $10 | 2.2 | 8.0s |
 | `qwen3.8-max` | $2 | $6 | 2.5 | 36.1s |
 | `gpt-5.6-terra` | $2 | $12 | 2.3 | 10.0s |
@@ -214,9 +214,19 @@ tokens are never measured at all.
 | `claude-opus-5` | $5 | $25 | 2.3 | 9.6s |
 | `gpt-5.6-sol` | $5 | $30 | 2.8 | 16.7s |
 
-DeepSeek publishes off-peak rates at half those figures; Claude prices are what
-the API charges, and this deployment ran the Claude models on a subscription
-instead, where the marginal cost of a turn is zero until the plan's limit.
+The DeepSeek ranges are off-peak to peak — the API halves its rates outside
+01:00–04:00 and 06:00–10:00 UTC, which is worth knowing if your background work
+runs on crons you control. Claude prices are what the API charges; this
+deployment ran the Claude models on a subscription instead, where the marginal
+cost of a turn is zero until the plan's limit.
+
+DeepSeek's weights are open, and third-party hosts on OpenRouter serve
+`deepseek-v4-flash` from about $0.07/$0.17 — a further 4x under the official
+off-peak rate. **These results do not transfer to those hosts.** Everything here
+was measured against the vendor's own endpoint; a different host is different
+infrastructure, possibly different quantisation, and a different answer to where
+the data goes. If you intend to run one, that is exactly the case for pointing
+this harness at it first.
 
 The spread across models that behave identically is roughly 25× on input and
 25× on output. `gpt-5.6-luna` is the cheapest by a wide margin but takes the
