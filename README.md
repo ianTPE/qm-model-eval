@@ -193,6 +193,36 @@ latency and where the data lands. And keep in mind the difference between "not
 found wanting" and "verified sound" — the table above is the first, not the
 second.
 
+### What they cost
+
+List prices as of August 2026, USD per million tokens, alongside what this
+deployment measured. `calls` is the mean number of model calls one turn took —
+a real multiplier on the token price, and the only cost signal available here
+because qm records no token counts.
+
+| model | input | output | calls/turn | median turn |
+|---|---|---|---|---|
+| `gpt-5.6-luna` | $0.20 | $1.20 | 3.1 | 14.0s |
+| `deepseek-v4-flash` | $0.44 | $1.32 | 2.3 | 12.2s |
+| `deepseek-v4-pro` | $1.32 | $3.96 | 2.3 | 15.4s |
+| `claude-sonnet-5` | $2 | $10 | 2.2 | 8.0s |
+| `qwen3.8-max` | $2 | $6 | 2.5 | 36.1s |
+| `gpt-5.6-terra` | $2 | $12 | 2.3 | 10.0s |
+| `kimi-k3` | $3 | $15 | 2.2 | 28.3s |
+| `claude-opus-5` | $5 | $25 | 2.3 | 9.6s |
+| `gpt-5.6-sol` | $5 | $30 | 2.8 | 16.7s |
+
+DeepSeek publishes off-peak rates at half those figures; Claude prices are what
+the API charges, and this deployment ran the Claude models on a subscription
+instead, where the marginal cost of a turn is zero until the plan's limit.
+
+The spread across models that behave identically is roughly 25× on input and
+25× on output. `gpt-5.6-luna` is the cheapest by a wide margin but takes the
+most model calls per turn, which claws some of it back; `deepseek-v4-flash` is
+close behind on price with fewer calls and a faster turn. Speed does not follow
+price either — `claude-sonnet-5` is the fastest in the set at 8s and sits in the
+middle of it.
+
 Two findings that are about qm rather than any model:
 
 - The clobber hazard did not materialise. Both tools replace their whole
