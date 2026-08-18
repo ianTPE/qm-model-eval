@@ -56,6 +56,33 @@ One quoting trap: if you later set `QM_PSQL` and the value contains spaces
 (`psql postgresql://…`), quote it in `.env`. Unquoted, sourcing executes it as a
 command instead.
 
+### Against a deployment on Fly or AWS
+
+The harness runs from your own machine either way — what changes is that a hosted
+deployment hands you no `.env` file and no local postgres. Leave `QM_ENV_FILE`
+unset and supply the three values it would have provided:
+
+```sh
+# Two tunnels, each in its own shell.
+fly proxy 15432:5432 -a your-qm-db
+fly proxy 18080:8080 -a your-qm
+
+export CORE_SIGNING_SECRET=...        # from fly secrets / AWS Secrets Manager
+export ORG_ID=your-org
+export QM_ACTOR=you@example.com       # an org admin
+export QM_CORE_URL=http://127.0.0.1:18080
+export QM_PSQL="psql postgresql://postgres:PASSWORD@127.0.0.1:15432/qm"
+```
+
+`QM_CORE_URL` also accepts a public `https://` host if core is reachable that
+way; the signature travels in headers and doesn't care about the transport.
+
+One thing to know before pointing this at a deployment people use: the tasks
+write to the database. They plant a memory notebook, add and remove a channel
+standing order, and delete the crons they create. Each task rolls back what it
+planted, and everything stays inside the scope you pin — but give the candidate
+its own scope rather than aiming at a live channel.
+
 ## The tasks
 
 | task | asks | observes |
