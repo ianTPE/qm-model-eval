@@ -74,14 +74,34 @@ failures, not inference):
 
 | model | what failed |
 |---|---|
-| `claude-haiku-4-5` | no cron at all on Chinese prompts, 0/3 — 3/3 in English |
+| `claude-haiku-4-5` | reports success on Chinese prompts and does nothing. Six of seven runs wrong: most created no cron while replying 「建立完成。20 分鐘後會提醒你」; one scheduled the reminder 56 years in the past. 3/3 in English |
 | `openrouter/auto` | 0/3 Chinese, 2/3 English, and unattributable: it picks a model per request while `session_llm_requests` records only `openrouter/auto` |
 | `glm-5.3` | schedules the wrong time — 2/3 on time in English, 1/3 in Chinese, worst case 30 hours out; also the slowest at 35–52s |
 
-Passed every task in both languages, with full coverage of the state-changing
-paths: `gpt-5.6-sol`, `gpt-5.6-terra`, `claude-opus-5`, `deepseek-v4-flash`,
-`qwen3.8-max`. Passed the scheduling task only: `claude-sonnet-5`,
-`gpt-5.6-luna`, `deepseek-v4-pro`, `kimi-k3`.
+Everything tested, and how far each was exercised:
+
+| model | harness / route | schedule en · zh | state-changing paths |
+|---|---|---|---|
+| `claude-opus-5` | claude · subscription | 3/3 · 3/3 | full |
+| `claude-sonnet-5` | claude · subscription | 3/3 · 3/3 | schedule only |
+| `claude-haiku-4-5` | claude · subscription | 3/3 · **0/3** | schedule only |
+| `gpt-5.6-sol` | pi · OpenAI | 3/3 · 3/3 | full |
+| `gpt-5.6-terra` | pi · OpenAI | 3/3 · 3/3 | full |
+| `gpt-5.6-luna` | pi · OpenAI | 3/3 · 3/3 | schedule only |
+| `deepseek-v4-flash` | pi · DeepSeek, anthropic-compatible | 3/3 · 3/3 | full |
+| `deepseek-v4-pro` | pi · DeepSeek, anthropic-compatible | 3/3 · 3/3 | schedule only |
+| `kimi-k3` | pi · Moonshot, anthropic-compatible | 3/3 · 3/3 | schedule only |
+| `qwen3.8-max` | pi · DashScope, **openai**-compatible | 3/3 · 3/3 | full |
+| `glm-5.3` | pi · Z.ai, anthropic-compatible | **2/3** · **1/3** on time | schedule only |
+| `openrouter/auto` | pi · OpenRouter | **2/3** · **0/3** | schedule only |
+
+"Full" means the memory-write, memory-clobber and Slack standing-order tasks as
+well, with the corrected probes. "Schedule only" means the model was not found
+wanting — not that it was verified sound. The distinction is the honest one and
+the table keeps it.
+
+Five custom providers were exercised along the way, four anthropic-compatible
+and one OpenAI-compatible, so both of qm's custom-provider protocols are covered.
 
 The passing models are indistinguishable here, so choose between them on cost,
 latency and where the data lands. And keep in mind the difference between "not
