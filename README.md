@@ -135,22 +135,27 @@ Everything tested, and how far each was exercised:
 | model | harness / route | schedule en · zh | state-changing paths |
 |---|---|---|---|
 | `claude-opus-5` | claude · subscription | 3/3 · 3/3 | full |
-| `claude-sonnet-5` | claude · subscription | 3/3 · 3/3 | schedule only |
+| `claude-sonnet-5` | claude · subscription | 3/3 · 3/3 | full |
 | `claude-haiku-4-5` | claude · subscription | 3/3 · **0/3** | schedule only |
 | `gpt-5.6-sol` | pi · OpenAI | 3/3 · 3/3 | full |
 | `gpt-5.6-terra` | pi · OpenAI | 3/3 · 3/3 | full |
-| `gpt-5.6-luna` | pi · OpenAI | 3/3 · 3/3 | schedule only |
+| `gpt-5.6-luna` | pi · OpenAI | 3/3 · 3/3 | full |
 | `deepseek-v4-flash` | pi · DeepSeek, anthropic-compatible | 3/3 · 3/3 | full |
-| `deepseek-v4-pro` | pi · DeepSeek, anthropic-compatible | 3/3 · 3/3 | schedule only |
-| `kimi-k3` | pi · Moonshot, anthropic-compatible | 3/3 · 3/3 | schedule only |
+| `deepseek-v4-pro` | pi · DeepSeek, anthropic-compatible | 3/3 · 3/3 | full |
+| `kimi-k3` | pi · Moonshot, anthropic-compatible | 3/3 · 3/3 | full |
 | `qwen3.8-max` | pi · DashScope, **openai**-compatible | 3/3 · 3/3 | full |
 | `glm-5.3` | pi · Z.ai, anthropic-compatible | **2/3** · **1/3** on time | schedule only |
 | `openrouter/auto` | pi · OpenRouter | **2/3** · **0/3** | schedule only |
 
 "Full" means the memory-write, memory-clobber and Slack standing-order tasks as
-well, with the corrected probes. "Schedule only" means the model was not found
-wanting — not that it was verified sound. The distinction is the honest one and
-the table keeps it.
+well, with the corrected probes. The three models still marked "schedule only"
+are the three that failed scheduling — they were not pursued further because
+that result already rules them out, not because anything else was found.
+
+Every model that passed scheduling has now been through all four tasks, and all
+nine passed every one. That is worth saying plainly: on these tasks the
+state-changing paths did not separate any model from any other. Only scheduling
+did.
 
 Four custom providers were exercised along the way — DeepSeek, Moonshot and Z.ai
 through the anthropic-compatible path, DashScope through the OpenAI one — so both
@@ -167,7 +172,7 @@ Two findings that are about qm rather than any model:
   target, but no model wiped existing content under an ordinary instruction.
   The negative control (`EVAL_NEGATIVE_CONTROL=1`) confirms they all *will*
   when asked to, so the detector is not blind.
-- qm's security screen quarantines about one standing-order change in five,
+- qm's security screen quarantines about one standing-order change in six (14 of 80),
   non-deterministically, and the refusal points at a review flow that does not
   exist ([yc-software/qm#574](https://github.com/yc-software/qm/issues/574)).
   A quarantined run and a model that declined to act look identical in the
