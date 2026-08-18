@@ -34,10 +34,27 @@ set -a; . ./.env; set +a
 node tasks/schedule.mjs  # against the org default model
 ```
 
-Everything deployment-specific lives in `lib/qm.mjs` and comes from the
-environment. `QM_ENV_FILE` points at the deployment's own `.env`, which is where
-`CORE_SIGNING_SECRET` comes from — turns are signed the same way any surface
-signs them, so the harness needs no back door.
+Line by line:
+
+1. `cp .env.example .env` creates your config from the template. Edit it: set
+   `QM_ENV_FILE` to the qm deployment's own `.env`, and check
+   `QM_PG_CONTAINER` matches the docker container running its postgres.
+2. `set -a; . ./.env; set +a` reads that file into shell variables and exports
+   them. This line is not optional: the harness has zero dependencies and no
+   dotenv, so tasks only see config through `process.env`. Without sourcing,
+   every run fails as if unset.
+3. `node tasks/schedule.mjs` runs the first task. There is no `npm install` —
+   package.json declares no dependencies. The real prerequisites are Node 20+
+   and a running qm deployment whose postgres this shell can reach.
+
+Note there are **two `.env` files**, doing different jobs: this repo's `.env`
+configures the harness itself, and `QM_ENV_FILE` points at the deployment's
+`.env`, from which `CORE_SIGNING_SECRET` is read — turns are signed the same way
+any surface signs them, so the harness needs no back door.
+
+One quoting trap: if you later set `QM_PSQL` and the value contains spaces
+(`psql postgresql://…`), quote it in `.env`. Unquoted, sourcing executes it as a
+command instead.
 
 ## The tasks
 
