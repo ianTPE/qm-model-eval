@@ -16,9 +16,15 @@ OUT=results/battery-${SCOPE}.tsv
 printf 'lang\ttask\trun\tmodel\tsecs\ta\tb\tc\n' > "$OUT"
 field() { printf '%s\n' "$1" | grep -m1 -E "$2" | sed -E "s/$3//" | tr -d ' \r'; }
 
-for lang in en zh; do
-  export EVAL_LANG=$lang
-  for run in $(seq 1 "$RUNS"); do
+# Alternate which language goes first. A fixed `for lang in en zh` makes English
+# always run against a shallower transcript than Chinese, so any apparent
+# language effect on a state-reading task is confounded with history depth — the
+# README lists that alongside trap 6, and this script used to have the defect it
+# warns about.
+for run in $(seq 1 "$RUNS"); do
+  if [ $((run % 2)) -eq 1 ]; then langs="en zh"; else langs="zh en"; fi
+  for lang in $langs; do
+    export EVAL_LANG=$lang
     o=$(timeout 500 node tasks/schedule.mjs "$SCOPE" 2>&1)
     printf '%s\tschedule\t%s\t%s\t%s\t%s\t%s\t%s\n' "$lang" "$run" \
       "$(field "$o" '^model' '^model *: *')" \
