@@ -311,6 +311,44 @@ instruction, do arithmetic on it, actually call a tool — and every observed
 failure was there. The clobber tasks found nothing in any model once their
 probes were fixed. That is a real result, and it cost far more than it returned.
 
+## Turning this into an acceptance suite
+
+This battery is the core layer — the behaviours any candidate must show, at any
+price. Two layers on top turn a pass into an adoption decision:
+
+1. **Core golden tasks** — the four here, in every language you work in. A model
+   that fails one is out, whatever it costs.
+2. **Customer golden tasks** — five to fifteen cases lifted from the real work:
+   turn meeting notes into tracked tasks, update a project rule, look something
+   up and notify the right person. This is where a model can pass the core and
+   still be wrong for you.
+3. **Regression runs** — the whole set again on a model switch, a provider
+   update behind the same id, a prompt or runtime change, or a new working
+   language — the triggers listed above, plus a runtime change.
+
+Every case, core or customer, carries the same fields:
+
+| field | what it pins down |
+|---|---|
+| initial state | what the database and channel look like before the turn |
+| instruction | the sentence a user would actually send |
+| must happen | the state change you will check for, and where |
+| must not happen | clobbered data, wrong scope, extra side effects |
+| observe | the table or endpoint to read afterwards; the reply is checked against it, not instead of it |
+| cleanup | how to put the state back before the next run |
+| language & surface | which languages; Web, Slack, or both |
+| repeats & threshold | how many runs, and the pass bar |
+
+Models are stochastic, so one run is an anecdote. 3/3 is the floor for core
+tasks; a case that deletes anything, notifies anyone outside the conversation,
+or touches sensitive data should be held to 10/10, with a person reading the
+failures rather than only the counts.
+
+What the layers decide between them: when every required task passes, choose on
+cost, latency and where the data is allowed to go. The only sufficient reason to
+pay for a more expensive model is a customer-critical case that it alone passes
+reliably.
+
 ## License
 
 MIT.
