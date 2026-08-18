@@ -197,8 +197,10 @@ second.
 
 List prices as of August 2026, USD per million tokens, alongside what this
 deployment measured. `calls` is the mean number of model calls one turn took —
-a real multiplier on the token price, and the only cost signal available here
-because qm records no token counts.
+a real multiplier on the token price, and the closest cost signal available,
+because qm keeps no token counts you can read. Input tokens are captured per
+call but held in a 1,000-entry in-memory ring that a restart drops; output
+tokens are never measured at all.
 
 | model | input | output | calls/turn | median turn |
 |---|---|---|---|---|
