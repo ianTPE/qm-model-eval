@@ -152,8 +152,9 @@ well, with the corrected probes. "Schedule only" means the model was not found
 wanting — not that it was verified sound. The distinction is the honest one and
 the table keeps it.
 
-Five custom providers were exercised along the way, four anthropic-compatible
-and one OpenAI-compatible, so both of qm's custom-provider protocols are covered.
+Four custom providers were exercised along the way — DeepSeek, Moonshot and Z.ai
+through the anthropic-compatible path, DashScope through the OpenAI one — so both
+of qm's custom-provider protocols are covered.
 
 The passing models are indistinguishable here, so choose between them on cost,
 latency and where the data lands. And keep in mind the difference between "not
