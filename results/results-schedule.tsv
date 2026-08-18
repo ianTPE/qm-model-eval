@@ -1,0 +1,16 @@
+scope	run	model	secs	status	created	drift	oneoff
+eval-opus-5	1	claude-opus-5	22.2	ok	yes	0min	yes
+eval-opus-5	2	claude-opus-5	18.8	ok	yes	0min	yes
+eval-opus-5	3	claude-opus-5	22.9	ok	yes	0min	yes
+eval-sonnet-5	1	claude-sonnet-5	22.6	ok	yes	0min	yes
+eval-sonnet-5	2	claude-sonnet-5	17.6	ok	yes	0min	yes
+eval-sonnet-5	3	claude-sonnet-5	18.0	ok	yes	0min	yes
+eval-haiku-4-5	1	claude-haiku-4-5	23.5	ok	yes	-29753176min	yes
+eval-haiku-4-5	2	claude-haiku-4-5	23.9	ok	yes	0min	yes
+eval-haiku-4-5	3	claude-haiku-4-5	21.4	ok	yes	0min	yes
+eval-kimi-1786974101	1	kimi-k3	42.5	ok	yes	0min	yes
+eval-kimi-1786974101	2	kimi-k3	37.6	ok	yes	0min	yes
+eval-kimi-1786974101	3	kimi-k3	43.0	ok	yes	0min	yes
+eval-glm	1	glm-5.3	34.5	ok	yes	0min	yes
+eval-glm	2	glm-5.3	52.5	ok	yes	17min	yes
+eval-glm	3	glm-5.3	68.0	ok	yes	0min	yes

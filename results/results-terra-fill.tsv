@@ -1,0 +1,10 @@
+tier	lang	run	model	a	b	c
+T1	en	1	gpt-5.6-terra	yes	yes	yes
+T1	en	2	gpt-5.6-terra	yes	yes	yes
+T1	en	3	gpt-5.6-terra	yes	yes	yes
+T1	zh	1	gpt-5.6-terra	yes	yes	yes
+T1	zh	2	gpt-5.6-terra	yes	yes	yes
+T1	zh	3	gpt-5.6-terra	yes	yes	yes
+T2	-	1	gpt-5.6-terra	no	yes	yes
+T2	-	2	gpt-5.6-terra	no	yes	yes
+T2	-	3	gpt-5.6-terra	no	yes	yes

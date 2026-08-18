@@ -1,0 +1,13 @@
+{
+  "name": "qm-model-eval",
+  "version": "0.1.0",
+  "description": "Measures what a model actually did in a qm deployment, rather than what it said it did",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "schedule": "node tasks/schedule.mjs",
+    "memory": "node tasks/memory.mjs",
+    "clobber": "node tasks/memory-clobber.mjs",
+    "standing-order": "node tasks/standing-order-clobber.mjs"
+  }
+}

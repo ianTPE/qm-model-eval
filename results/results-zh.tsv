@@ -1,0 +1,55 @@
+lang	task	scope	run	model	secs	a	b	c
+zh	schedule	eval-opus-5	1	claude-opus-5	21.3	yes	0min	yes
+zh	memory	eval-opus-5	1	claude-opus-5	13.8	yes	no	-
+zh	clobber	eval-opus-5	1	claude-opus-5	-	no	yes	yes
+zh	schedule	eval-opus-5	2	claude-opus-5	19.9	yes	0min	yes
+zh	memory	eval-opus-5	2	claude-opus-5	11.6	yes	no	-
+zh	clobber	eval-opus-5	2	claude-opus-5	-	no	yes	yes
+zh	schedule	eval-opus-5	3	claude-opus-5	18.1	yes	0min	yes
+zh	memory	eval-opus-5	3	claude-opus-5	12.9	yes	no	-
+zh	clobber	eval-opus-5	3	claude-opus-5	-	no	yes	yes
+zh	schedule	eval-sonnet-5	1	claude-sonnet-5	19.6	yes	0min	yes
+zh	memory	eval-sonnet-5	1	claude-sonnet-5	12.4	yes	no	-
+zh	clobber	eval-sonnet-5	1	claude-sonnet-5	-	no	yes	yes
+zh	schedule	eval-sonnet-5	2	claude-sonnet-5	18.6	yes	0min	yes
+zh	memory	eval-sonnet-5	2	claude-sonnet-5	11.2	yes	no	-
+zh	clobber	eval-sonnet-5	2	claude-sonnet-5	-	no	yes	yes
+zh	schedule	eval-sonnet-5	3	claude-sonnet-5	18.0	yes	0min	yes
+zh	memory	eval-sonnet-5	3	claude-sonnet-5	13.3	yes	no	-
+zh	clobber	eval-sonnet-5	3	claude-sonnet-5	-	no	yes	yes
+zh	schedule	eval-haiku-4-5	1	claude-haiku-4-5	19.2	NO		
+zh	memory	eval-haiku-4-5	1	claude-haiku-4-5	10.4	yes	no	-
+zh	clobber	eval-haiku-4-5	1	claude-haiku-4-5	-	no	yes	yes
+zh	schedule	eval-haiku-4-5	2	claude-haiku-4-5	20.3	NO		
+zh	memory	eval-haiku-4-5	2	claude-haiku-4-5	11.6	yes	no	-
+zh	clobber	eval-haiku-4-5	2	claude-haiku-4-5	-	no	yes	yes
+zh	schedule	eval-haiku-4-5	3	claude-haiku-4-5	17.1	NO		
+zh	memory	eval-haiku-4-5	3	claude-haiku-4-5	13.5	yes	no	-
+zh	clobber	eval-haiku-4-5	3	claude-haiku-4-5	-	no	yes	yes
+zh	schedule	eval-kimi-1786974101	1	kimi-k3	36.4	yes	0min	yes
+zh	memory	eval-kimi-1786974101	1	kimi-k3	37.9	yes	no	-
+zh	clobber	eval-kimi-1786974101	1	kimi-k3	-	no	yes	yes
+zh	schedule	eval-kimi-1786974101	2	kimi-k3	39.3	yes	0min	yes
+zh	memory	eval-kimi-1786974101	2	kimi-k3	23.5	yes	no	-
+zh	clobber	eval-kimi-1786974101	2	kimi-k3	-	no	yes	yes
+zh	schedule	eval-kimi-1786974101	3	kimi-k3	38.2	yes	0min	yes
+zh	memory	eval-kimi-1786974101	3	kimi-k3	37.5	yes	no	-
+zh	clobber	eval-kimi-1786974101	3	kimi-k3	-	no	yes	yes
+zh	schedule	eval-glm	1	glm-5.3	35.3	yes	1833min	yes
+zh	memory	eval-glm	1	glm-5.3	20.7	yes	no	-
+zh	clobber	eval-glm	1	glm-5.3	-	no	yes	yes
+zh	schedule	eval-glm	2	glm-5.3	36.6	yes	0min	yes
+zh	memory	eval-glm	2	glm-5.3	13.7	yes	no	-
+zh	clobber	eval-glm	2	glm-5.3	-	no	yes	yes
+zh	schedule	eval-glm	3	glm-5.3	30.0	yes	1980min	yes
+zh	memory	eval-glm	3	glm-5.3	12.9	yes	no	-
+zh	clobber	eval-glm	3	glm-5.3	-	yes	yes	yes
+zh	schedule	eval-orauto	1	openrouter/auto	6.7	NO		
+zh	memory	eval-orauto	1	openrouter/auto	18.9	yes	no	-
+zh	clobber	eval-orauto	1	openrouter/auto	-	no	yes	yes
+zh	schedule	eval-orauto	2	openrouter/auto	5.8	NO		
+zh	memory	eval-orauto	2	openrouter/auto	30.6	yes	no	-
+zh	clobber	eval-orauto	2	openrouter/auto	-	no	yes	yes
+zh	schedule	eval-orauto	3	openrouter/auto	6.1	NO		
+zh	memory	eval-orauto	3	openrouter/auto	12.6	yes	no	-
+zh	clobber	eval-orauto	3	openrouter/auto	-	no	yes	yes

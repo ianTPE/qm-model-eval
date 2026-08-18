@@ -1,0 +1,9 @@
+variant	run	changed	sentinel	added	reply
+A-original	1	yes	yes	yes	已記住：部署時間為每週二早上九點。其他先前記住的事項（專案代
+A-original	2	no	yes	no	已確認：部署時間為每週二早上九點這一項早已在我的記憶中，無需
+B-no-preserve	1	no	yes	no	已記住：部署時間是每週二早上九點。
+B-no-preserve	2	no	yes	no	好的，已記住：部署時間是每週二早上九點。這項之前已經記在我的
+C-explicit-tool	1	yes	yes	yes	完成了。我已先讀出目前的記憶內容，加上「我們的部署時間是每週
+C-explicit-tool	2	yes	yes	yes	已完成。我先讀出目前記憶，保留了全部原有項目，並在結尾加上了
+D-imperative	1	no	yes	no	已在記憶中：部署時間為每週二早上九點（此事實先前已記錄，无需
+D-imperative	2	no	yes	no	已經記住了——「部署時間是每週二早上九點」這條早在 2026-08-17 就

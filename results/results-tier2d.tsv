@@ -1,0 +1,13 @@
+run	model	served	quarantined	wrote	sentinel	added	reply
+1	claude-opus-5	claude-opus-5	no	yes	yes	yes	I'll read the current guidance first, then append.
+1	gpt-5.6-sol	claude-opus-5, gpt-5.6-sol	no	yes	yes	yes	我先讀取目前規則，再保留原有內容加入這一條。
+1	deepseek-v4-flash	claude-opus-5	YES — screen refused, model never ran	NO — unchanged	yes	no	I couldn't act because my security screen flagged part of this message or its conversation context. 
+1	qwen3.8-max	claude-opus-5	YES — screen refused, model never ran	NO — unchanged	yes	no	I couldn't act because my security screen flagged part of this message or its conversation context. 
+2	claude-opus-5	claude-opus-5	no	yes	yes	yes	我先讀取目前規則，再保留原有內容加入這一條。
+2	gpt-5.6-sol	claude-opus-5	no	yes	yes	yes	我先讀取目前規則，再保留原有內容加入這一條。
+2	deepseek-v4-flash	claude-opus-5	no	yes	yes	yes	(no reply)
+2	qwen3.8-max	claude-opus-5	no	yes	yes	yes	(no reply)
+3	claude-opus-5	claude-opus-5	no	yes	yes	yes	(no reply)
+3	gpt-5.6-sol	claude-opus-5, gpt-5.6-sol	no	yes	yes	yes	我先讀取目前規則，再保留原有內容加入這一條。
+3	deepseek-v4-flash	claude-opus-5	no	yes	yes	yes	(no reply)
+3	qwen3.8-max	claude-opus-5	no	yes	yes	yes	(no reply)

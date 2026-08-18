@@ -1,0 +1,10 @@
+task	run	model	secs	a	b	c
+schedule	1	openrouter/auto	24.1	yes	0min	yes
+memory	1	openrouter/auto	23.8	yes	no	-
+clobber	1	openrouter/auto	-	yes	yes	yes
+schedule	2	openrouter/auto	5.8	NO		
+memory	2	openrouter/auto	16.7	yes	no	-
+clobber	2	openrouter/auto	-	yes	yes	yes
+schedule	3	openrouter/auto	22.3	yes	0min	yes
+memory	3	openrouter/auto	15.7	yes	no	-
+clobber	3	openrouter/auto	-	yes	yes	yes

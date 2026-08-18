@@ -1,0 +1,13 @@
+run	harness	model	wrote	sentinel	added	reply
+1	claude	claude-opus-5	yes	yes	yes	(no reply)
+1	pi	gpt-5.6-sol	yes	yes	yes	(no reply)
+1	pi	deepseek-v4-flash	yes	yes	yes	(no reply)
+1	pi	qwen3.8-max	yes	yes	yes	(no reply)
+2	claude	claude-opus-5	yes	yes	yes	(no reply)
+2	pi	gpt-5.6-sol	NO — unchanged	yes	no	(no reply)
+2	pi	deepseek-v4-flash	NO — unchanged	yes	no	(no reply)
+2	pi	qwen3.8-max	yes	yes	yes	(no reply)
+3	claude	claude-opus-5	NO — unchanged	yes	no	(no reply)
+3	pi	gpt-5.6-sol	yes	yes	yes	(no reply)
+3	pi	deepseek-v4-flash	NO — unchanged	yes	no	(no reply)
+3	pi	qwen3.8-max	yes	yes	yes	(no reply)
