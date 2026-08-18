@@ -7,11 +7,28 @@ The gap this exists for: an agent that answers *"Done — your reminder is set f
 20 minutes from now"* when no cron was created. The reply is printed next to the
 observed outcome so the two can visibly disagree.
 
-## Why bother
+## Why this exists
 
-The usual advice is to pick a cheap model and hope, or an expensive one and stop
-worrying. Neither survives contact: across 12 models, the failures did not track
-price. Three models failed outright, and two of them are not the cheap ones.
+qm is a working mode, not a chat window. It reads intent out of an ordinary
+sentence — no command syntax, often not in English — then calls a tool and
+changes state that persists: a cron that will fire, a memory other conversations
+will read, a standing order that governs a channel until someone removes it. A
+chat model that misreads you produces a bad paragraph you scroll past. Here it
+produces a reminder that never fires, or a rule that silently stops applying.
+
+That sets a higher bar on semantic discrimination than a general benchmark
+measures, and nothing on a model card tells you whether a given model clears it
+in your language, on your deployment.
+
+The other half is cost. A small company cannot answer this by buying the most
+expensive model, and the data here says it wouldn't work anyway: **failures did
+not track price.** Two of the three models that failed are not the cheap ones,
+and the cheapest model tested passed everything.
+
+So the deliverable is not the table below — those results describe twelve models
+on one afternoon, and models change monthly. **The deliverable is the procedure:
+run it before you adopt a model, and again before you switch.** Half an hour of
+turns is cheaper than finding out from a reminder that never fired.
 
 ## Setup
 
@@ -51,6 +68,41 @@ message: surface tools are gated on `input.surfaceTools` plus a resolvable
 delivery destination, so a synthesised turn gets `[no channel scope here]` no
 matter what the conversation fields say. A bot-token post will not do either —
 the agent filters its own messages and no turn happens.
+
+## Evaluating a model you are considering
+
+Half an hour, and nothing in production is touched — a pinned channel scope
+overrides the org default for that scope only.
+
+```sh
+# 1. Give the candidate its own scope, so live channels keep the current model.
+node -e 'import("./lib/qm.mjs").then(m=>m.pinScope("channel:eval-candidate","pi","the-model-id"))'
+
+# 2. Three runs of each task, both languages. ~25 turns.
+bin/battery.sh eval-candidate 3
+
+# 3. Prove the instrument still detects a real failure before you trust a pass.
+EVAL_NEGATIVE_CONTROL=1 node tasks/memory-clobber.mjs eval-candidate
+```
+
+Read it like this:
+
+- **Any `created: NO` on scheduling disqualifies it.** That is the agent
+  reporting work it did not do, and it is the failure that costs the most to
+  discover in production.
+- **Drift over a minute or two disqualifies it.** A reminder at the wrong hour is
+  not a reminder.
+- **`written to org: YES` disqualifies it** for anything confidential — that
+  memory is readable from every other conversation in the org.
+- **Read the replies, not only the columns.** A refusal with a stated reason is
+  not the same failure as silence, and a model that declines to store a
+  credential is doing the right thing (see trap 7 below).
+- **A model that passes is not thereby better than another that passes.** Choose
+  among them on cost, latency, and where the data lands.
+
+Do this again when you switch models, when a provider ships a new version behind
+the same id, or when you start operating in another language. All three have
+changed a result here.
 
 ## What the runs showed
 
