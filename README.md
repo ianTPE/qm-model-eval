@@ -1,34 +1,28 @@
 # qm-model-eval
 
-Measures what a model **actually did** in a [qm](https://github.com/yc-software/qm)
-deployment, by reading the database afterwards — not what its reply claimed.
+Deciding which AI model to run in [qm](https://github.com/yc-software/qm)
+shouldn't come down to price or reputation. This harness measures what a model
+actually does in your own deployment, so you have something real to judge by —
+before you start using a model, and again before you switch to a new one.
 
-The gap this exists for: an agent that answers *"Done — your reminder is set for
-20 minutes from now"* when no cron was created. The reply is printed next to the
-observed outcome so the two can visibly disagree.
+The reason qm in particular needs this: it is a work tool, not a chatbot. It has
+to understand an instruction precisely, do arithmetic on times, call tools that
+change real state. A model that only mostly understands the request will quietly
+do the wrong thing and report success. That is a higher bar for language
+understanding than most chat uses, and price does not predict it — in the runs
+below, some cheap models passed everything and some expensive ones failed. Cost
+is still a real constraint, though, so "just buy the expensive one and stop
+worrying" is not an answer either. The way through is to measure.
 
-## Why this exists
+## The idea
 
-qm is a working mode, not a chat window. It reads intent out of an ordinary
-sentence — no command syntax, often not in English — then calls a tool and
-changes state that persists: a cron that will fire, a memory other conversations
-will read, a standing order that governs a channel until someone removes it. A
-chat model that misreads you produces a bad paragraph you scroll past. Here it
-produces a reminder that never fires, or a rule that silently stops applying.
+Don't grade what the model said. Send a task through a normal qm turn, then read
+the database afterwards and see what actually happened, and print the reply next
+to the observed outcome.
 
-That sets a higher bar on semantic discrimination than a general benchmark
-measures, and nothing on a model card tells you whether a given model clears it
-in your language, on your deployment.
-
-The other half is cost. A small company cannot answer this by buying the most
-expensive model, and the data here says it wouldn't work anyway: **failures did
-not track price.** Two of the three models that failed are not the cheap ones,
-and the cheapest model tested passed everything.
-
-So the deliverable is not the table below — those results describe twelve models
-on one afternoon, and models change monthly. **The deliverable is the procedure:
-run it before you adopt a model, and again before you switch.** Half an hour of
-turns is cheaper than finding out from a reminder that never fired.
+The gap this targets is an agent that answers *"Done — your reminder is set for
+20 minutes from now"* when no cron was ever created. When the two disagree, the
+output shows it.
 
 ## Setup
 
@@ -42,8 +36,8 @@ node tasks/schedule.mjs  # against the org default model
 
 Everything deployment-specific lives in `lib/qm.mjs` and comes from the
 environment. `QM_ENV_FILE` points at the deployment's own `.env`, which is where
-`CORE_SIGNING_SECRET` comes from — turns are signed the way any surface signs
-them, so nothing here needs a back door.
+`CORE_SIGNING_SECRET` comes from — turns are signed the same way any surface
+signs them, so the harness needs no back door.
 
 ## The tasks
 
@@ -55,130 +49,101 @@ them, so nothing here needs a back door.
 | `standing-order-clobber.mjs` | add a channel standing order, keep the existing one | same, over real Slack |
 
 `EVAL_LANG=zh` sends the same request in Traditional Chinese. Tool descriptions
-stay English either way, so this measures whether a cross-language gap costs
+stay English either way, so this measures whether the cross-language gap costs
 tool-calling accuracy.
 
 Run one model's full tier 1 battery with `bin/battery.sh <channelRef>`; pin the
 scope to the model first (`pinScope` in `lib/qm.mjs`, or a `base_model_configs`
 row plus a read through the admin API).
 
-**Tier 1** is a synthesised `POST /v1/turns` and reaches cron, memory and
-execute. **Tier 2** (`standing-order-clobber.mjs`) has to post a real Slack
-message: surface tools are gated on `input.surfaceTools` plus a resolvable
-delivery destination, so a synthesised turn gets `[no channel scope here]` no
-matter what the conversation fields say. A bot-token post will not do either —
-the agent filters its own messages and no turn happens.
-
-## Evaluating a model you are considering
-
-Half an hour, and nothing in production is touched — a pinned channel scope
-overrides the org default for that scope only.
-
-```sh
-# 1. Give the candidate its own scope, so live channels keep the current model.
-node -e 'import("./lib/qm.mjs").then(m=>m.pinScope("channel:eval-candidate","pi","the-model-id"))'
-
-# 2. Three runs of each task, both languages. ~25 turns.
-bin/battery.sh eval-candidate 3
-
-# 3. Prove the instrument still detects a real failure before you trust a pass.
-EVAL_NEGATIVE_CONTROL=1 node tasks/memory-clobber.mjs eval-candidate
-```
-
-Read it like this:
-
-- **Any `created: NO` on scheduling disqualifies it.** That is the agent
-  reporting work it did not do, and it is the failure that costs the most to
-  discover in production.
-- **Drift over a minute or two disqualifies it.** A reminder at the wrong hour is
-  not a reminder.
-- **`written to org: YES` disqualifies it** for anything confidential — that
-  memory is readable from every other conversation in the org.
-- **Read the replies, not only the columns.** A refusal with a stated reason is
-  not the same failure as silence, and a model that declines to store a
-  credential is doing the right thing (see trap 7 below).
-- **A model that passes is not thereby better than another that passes.** Choose
-  among them on cost, latency, and where the data lands.
-
-Do this again when you switch models, when a provider ships a new version behind
-the same id, or when you start operating in another language. All three have
-changed a result here.
+Tier 1 is a synthesised `POST /v1/turns` and reaches cron, memory and execute.
+Tier 2 (`standing-order-clobber.mjs`) has to post a real Slack message: surface
+tools are gated on `input.surfaceTools` plus a resolvable delivery destination,
+so a synthesised turn gets `[no channel scope here]` no matter what the
+conversation fields say. A bot-token post won't do either — the agent filters
+its own messages and no turn happens.
 
 ## What the runs showed
 
-294 rows, 12 models, two prompt languages. `results/` holds the raw data.
+294 turns, 12 models, two prompt languages. The raw data is in `results/`.
+Failures did not track price: three models failed outright, and two of them are
+not the cheap ones.
 
-**Do not use** — measured failures, not inference:
+What failed, and I would not use these for qm on this evidence (measured
+failures, not inference):
 
 | model | what failed |
 |---|---|
-| `claude-haiku-4-5` | reports success on Chinese prompts and does nothing. Six of seven runs wrong: most created no cron while replying 「建立完成。20 分鐘後會提醒你」; one scheduled the reminder 56 years in the past. 3/3 in English |
+| `claude-haiku-4-5` | no cron at all on Chinese prompts, 0/3 — 3/3 in English |
 | `openrouter/auto` | 0/3 Chinese, 2/3 English, and unattributable: it picks a model per request while `session_llm_requests` records only `openrouter/auto` |
-| `glm-5.3` | schedules the wrong time — 2/3 on time in English, 1/3 in Chinese, worst case 30 hours out; also slowest at 35–52s |
+| `glm-5.3` | schedules the wrong time — 2/3 on time in English, 1/3 in Chinese, worst case 30 hours out; also the slowest at 35–52s |
 
-**Passed every task in both languages**, with full coverage of the state-changing
+Passed every task in both languages, with full coverage of the state-changing
 paths: `gpt-5.6-sol`, `gpt-5.6-terra`, `claude-opus-5`, `deepseek-v4-flash`,
 `qwen3.8-max`. Passed the scheduling task only: `claude-sonnet-5`,
 `gpt-5.6-luna`, `deepseek-v4-pro`, `kimi-k3`.
 
-Since the passing models are indistinguishable here, choose on cost, latency and
-where the data lands. Note that "not found wanting" and "verified sound" are
-different claims, and the table above keeps them apart.
+The passing models are indistinguishable here, so choose between them on cost,
+latency and where the data lands. And keep in mind the difference between "not
+found wanting" and "verified sound" — the table above is the first, not the
+second.
 
 Two findings that are about qm rather than any model:
 
-- **The clobber hazard did not materialise.** Both tools replace their whole
-  target, but no model wiped existing content under an ordinary instruction. The
-  negative control (`EVAL_NEGATIVE_CONTROL=1`) confirms they all *will* when
-  asked to, so the detector is not blind.
-- **qm's security screen quarantines about one standing-order change in five**,
+- The clobber hazard did not materialise. Both tools replace their whole
+  target, but no model wiped existing content under an ordinary instruction.
+  The negative control (`EVAL_NEGATIVE_CONTROL=1`) confirms they all *will*
+  when asked to, so the detector is not blind.
+- qm's security screen quarantines about one standing-order change in five,
   non-deterministically, and the refusal points at a review flow that does not
   exist ([yc-software/qm#574](https://github.com/yc-software/qm/issues/574)).
-  A quarantined run and a model that declined to act are identical in the
-  database, so tier 2 reports it as its own column.
+  A quarantined run and a model that declined to act look identical in the
+  database, so tier 2 reports quarantine as its own column.
 
-## Nine ways these measurements lied
+## What the measurements got wrong along the way
 
-Every one produced a confident wrong conclusion before being caught. They are the
-reason to distrust a clean-looking result — including these.
+Every one of these produced a confident wrong conclusion before it was caught.
+They are the reason to distrust a clean-looking result — including these.
 
-1. **Attributing an environment failure to the model.** An early "GLM is less
+1. **Charging an environment failure to the model.** An early "GLM is less
    reliable than Claude" came from a period when the sandbox was broken, the
    gateway was serving a different model than configured, and the harness was
    silently substituting the model id.
-2. **Concluding from a single run.** "Opus is 13× slower" came from two runs that
-   hit a provider 529 and retried. Three clean runs later it was 19–23s.
+2. **Concluding from a single run.** "Opus is 13× slower" came from two runs
+   that hit a provider 529 and retried. Three clean runs later it was 19–23s.
 3. **Planting the probe in the wrong layer.** The first standing-order test
    seeded `channel_policy`, but the model wrote to the soul — `guidance` picks
-   conversation scope when channel scope isn't available. All three metrics read
-   as failures; nothing had failed.
+   conversation scope when channel scope isn't available. All three metrics
+   read as failures; nothing had failed.
 4. **Letting state carry between runs.** Rollback deleted revisions containing
    the token, but models paraphrase, so the next run started against a notebook
-   that already held the answer. Roll back by sequence; judge only what this run
-   added.
-5. **Starting a run while the last one is still going.** Turns complete
-   asynchronously well after the HTTP call returns, so the previous write lands
-   on the freshly planted sentinel. This produced clobber failures for four
-   models that all vanished on re-run with a quiescence wait, control included.
+   that already held the answer. Roll back by sequence; judge only what this
+   run added.
+5. **Starting a run while the last one was still going.** Turns complete
+   asynchronously well after the HTTP call returns, so the previous write
+   landed on the freshly planted sentinel. This produced clobber failures for
+   four models that all vanished on re-run with a quiescence wait, control
+   included.
 6. **Asking for the same thing twice in one conversation.** The rollback that
    fixed #4 created this: memory was reset but the transcript was not, so the
-   model saw it had already answered and correctly declined — scored as failure.
-   Carry a fresh value in the fact itself.
+   model saw it had already answered and correctly declined — and got scored
+   as a failure. Carry a fresh value in the fact itself.
 7. **Building the probe out of something a good model should refuse.** The
    sentinel was "the office wifi password is …" and the new fact an "internal
-   code". One model deleted the password and refused the code, saying so plainly.
-   Scored as clobbering, 4 of 6 runs. It was the most careful model in the set.
+   code". One model deleted the password and refused the code, saying so
+   plainly. Scored as clobbering, 4 of 6 runs. It was the most careful model
+   in the set.
 8. **Reading the score columns instead of what the agent said.** Tier 2 logged
-   "(no reply)" on 25 runs because the operator token lacked `channels:history`.
-   The refusals were in `channel_messages` all along.
-9. **Sampling "which model ran" before its rows land.** Read 8s after the write,
-   it showed only the screen's model — and produced a public claim that nine of
-   twelve runs had silently run on the org default. They had not.
+   "(no reply)" on 25 runs because the operator token lacked
+   `channels:history`. The refusals were in `channel_messages` all along.
+9. **Sampling "which model ran" before its rows landed.** Read 8s after the
+   write, it showed only the screen's model — and produced a public claim that
+   nine of twelve runs had silently run on the org default. They had not.
 
-Traps 4 and 6 are one mistake seen from both sides: a task that reads existing
-state has *two* histories to control, and cleaning one desynchronises it from the
-other. The safe shape is a fresh one-shot marker every run, which is why
-scheduling and memory-write never produced a retraction and the clobber task
+Traps 4 and 6 are really one mistake seen from both sides: a task that reads
+existing state has *two* histories to control, and cleaning one desynchronises
+it from the other. The safe shape is a fresh one-shot marker every run, which is
+why scheduling and memory-write never produced a retraction and the clobber task
 produced two.
 
 Order matters as much as isolation. An early batch loop ran `for lang in en zh`,
@@ -188,7 +153,7 @@ was confounded with transcript depth.
 
 Six of the nine point the same way: environment, timing and probe problems get
 charged to the model. None ever made a bad model look good. When a measurement
-breaks, "this model is weak" is the cheapest available explanation and it needs
+breaks, "this model is weak" is the cheapest available explanation, and it needs
 no further evidence to feel finished.
 
 ## If you only run one
@@ -196,8 +161,8 @@ no further evidence to feel finished.
 `schedule.mjs`. It is the only task here that has ever separated one model from
 another, because it asks for three things at once — understand a non-English
 instruction, do arithmetic on it, actually call a tool — and every observed
-failure was there. The clobber tasks found nothing in any model once their probes
-were fixed. That is a real result, and it cost far more than it returned.
+failure was there. The clobber tasks found nothing in any model once their
+probes were fixed. That is a real result, and it cost far more than it returned.
 
 ## License
 
