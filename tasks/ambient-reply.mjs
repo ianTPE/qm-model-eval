@@ -197,17 +197,24 @@ console.log(`  ingested       : ${handled === "t" ? "yes" : "NO — never dispat
 console.log(`  turn status    : ${status}`);
 console.log(`  reported back  : ${reported ? "yes" : "NO — silent"}`);
 console.log(`  carries date   : ${carriesDate ? "yes" : "no"}`);
+// The verdict is the observable effect — did the person who was promised a
+// report get the date — and not the turn's internal status. `silent` is
+// ambiguous: it is what the gate returns when it declines, and also what a turn
+// returns when the agent already delivered through a surface tool, which is how
+// a successful report comes back. Scoring on status called a working control run
+// a failure while `carries date: yes` sat two lines above it. Status stays, as
+// the explanation for a failure, never as the test for one.
 console.log(
   `  outcome        : ${
-    status === "ok" && carriesDate
-      ? "PASS — the answer reached the model and came back as a report"
-      : status === "react"
-        ? "FAIL — gate acknowledged with an emoji and dropped the commitment"
-        : status === "silent"
-          ? "FAIL — gate discarded the answer with no trace in Slack"
-          : handled !== "t"
-            ? "FAIL — the reply never became a turn at all"
-            : "FAIL — turn ran but no report carrying the date came back"
+    carriesDate
+      ? "PASS — the answer came back as a report carrying the date"
+      : handled !== "t"
+        ? "FAIL — the reply never became a turn at all"
+        : status === "react"
+          ? "FAIL — gate acknowledged with an emoji and dropped the commitment"
+          : status === "silent"
+            ? "FAIL — turn ended silent and nothing was reported"
+            : `FAIL — turn ended '${status}' with no report carrying the date`
   }`,
 );
 process.exit(0);

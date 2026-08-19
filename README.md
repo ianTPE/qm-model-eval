@@ -96,7 +96,7 @@ its own scope rather than aiming at a live channel.
 | `memory.mjs` | remember a fact | that it landed in this scope, and did **not** land org-wide |
 | `memory-clobber.mjs` | remember a second fact, keep the first | whether the first survived |
 | `standing-order-clobber.mjs` | add a channel standing order, keep the existing one | same, over real Slack |
-| `ambient-reply.mjs` | answer a question qm asked, in-thread, with no `@`-mention | whether the turn came back `ok`, or was dropped at the gate as `react`/`silent` |
+| `ambient-reply.mjs` | answer a question qm asked, in-thread, with no `@`-mention | whether the promised report arrives carrying the answer — and if not, whether the turn was dropped at the gate as `react`/`silent` |
 
 `ambient-reply.mjs` is scored differently from the rest and belongs to whoever
 sets the **org** model, not the channel model — see [the ambient
@@ -336,14 +336,16 @@ so English always went first against a clean channel and Chinese always followed
 nine turns of history — every apparent language effect on a state-reading task
 was confounded with transcript depth.
 
-Seven of the eleven point the same way: environment, timing, probe and setup
+Eight of the twelve point the same way: environment, timing, probe and setup
 problems get charged to the model. None ever made a bad model look good. When a
 measurement breaks, "this model is weak" is the cheapest available explanation,
-and it needs no further evidence to feel finished. Traps 10 and 11 are the
-clearest cases that knowing this does not stop it: both happened on the first
-runs of a task written to avoid them, with the list already sitting above.
-Trap 11 is the one worth re-reading — it produced the right verdict for the
-wrong reason, which is the failure mode no result table can show you.
+and it needs no further evidence to feel finished. Traps 10, 11 and 12 are the
+clearest cases that knowing this does not stop it: all three happened while
+building one task, written to avoid exactly this, with the list already sitting
+above it. Three consecutive runs, three different instrument faults, before a
+single number in this section was true. 11 and 12 are the pair worth
+re-reading — one produced the right verdict for the wrong reason, the other the
+wrong verdict with the right evidence printed directly above it.
 
 ## The ambient path: a different model decides whether you get an answer
 
@@ -418,22 +420,30 @@ EVAL_MENTION=1 node tasks/ambient-reply.mjs claude claude-sonnet-5   # control
 
 It posts a mentioned message asking qm to put a question to the room and report
 the answer back, waits for qm to actually ask, then answers in that thread
-**without a mention** — the exact shape qm's own message invites. It scores the
-turn's stored status rather than the Slack transcript, because that is the only
-thing that separates the three outcomes:
+**without a mention** — the exact shape qm's own message invites.
 
-| status | meaning |
+The verdict is whether the report qm promised arrives carrying the date. That is
+the thing the requester was owed, and it is the only signal that means the same
+thing on both paths. The turn's stored status is printed too, but as the
+diagnosis when no report came, never as the test:
+
+| status | meaning when nothing was reported |
 |---|---|
-| `ok` | the gate passed it through and the pinned model answered |
 | `react` | the gate declined and left an emoji |
-| `silent` | the gate declined and left nothing at all |
+| `silent` | the gate declined and left nothing |
+| `ok` | the turn ran; the model is what fell short, not the gate |
 
-Reading Slack alone cannot tell `react` and `silent` apart from a model that ran
-and chose to say nothing, which is why the earlier incident was so hard to see.
+`silent` is ambiguous on its own — it is also what a turn returns when the agent
+has already delivered through a surface tool, which is how a *successful* report
+comes back. Reading it as a verdict marked a working control run as a failure
+(trap 12). Reading the Slack transcript alone has the mirror-image problem: it
+cannot tell a gate that declined from a model that ran and chose to say nothing,
+which is why the original incident was so hard to see. Both are needed, in that
+order.
 
 `EVAL_MENTION=1` runs the identical exchange with the mention restored, which
-skips the gate. The contrast is the measurement — a run where both forms return
-`ok` shows nothing, and should be repeated rather than reported.
+skips the gate. The contrast is the measurement — a run where both forms report
+the date shows nothing, and should be repeated rather than reported.
 
 Two guards matter, and both were added after the first run got them wrong.
 The security screen quarantines a share of Slack requests, and a quarantined
@@ -449,6 +459,48 @@ from `session_llm_requests`, and a turn the gate declines can write nothing
 there, so it reports idle before the run row exists. The task waits on the run
 row for the thread instead. Traps 10 and 11 below have the detail; both were
 found by running this task, not by reading the code.
+
+### What it showed
+
+Five runs against this deployment, org default `claude-sonnet-5`, channel pinned
+to the same. Small n, and reported as such — but the two forms never crossed.
+
+| run | form | turn status | report arrived | verdict |
+|---|---|---|---|---|
+| 1 | ambient | — | — | inconclusive: screen quarantined the setup |
+| 2 | ambient | `react` | no | **FAIL** |
+| 3 | ambient | `react` | no | **FAIL** |
+| 4 | `@`-mentioned | `silent` | yes, with the date | **PASS** |
+| 5 | `@`-mentioned | `silent` | yes, with the date | **PASS** |
+
+The mentioned control, verbatim from `channel_messages`:
+
+```
+qm   請問負責機房維護的同仁：MAINT-9593 的維護要排哪一天？麻煩在這裡回覆，謝謝。
+you  @qm MAINT-9593 的維護排 9/23，已經跟廠商確認過了。
+qm   收到，MAINT-9593 的機房維護已排定 9/23，已和廠商確認過。
+```
+
+Drop the `@` from the middle line and the third line becomes a 👍. Same channel,
+same model, same exchange, same wording otherwise. Note what qm's own question
+asks for — *麻煩在這裡回覆*, "please just reply here" — which is the form it then
+declines to act on.
+
+Which model declined it is not recorded anywhere. `judgeModelId` resolves to
+`auxiliaryModelFor(org base model)`, and for an Anthropic org model the registry
+answers `claude-haiku-4-5` — the one model in the results table above that this
+repo says not to run, on the strength of 6 wrong answers in 7 Chinese scheduling
+runs. That derivation is read from qm's source, not observed: the detection call
+is recorded only in an in-memory ring, so nothing durable says who made the
+decision.
+
+Which is the wider problem. A turn the gate declines writes **no row in
+`session_llm_requests` and no row in `turn_metrics`** — 1,196 metrics rows on
+this deployment carry only `capture` and `ok`, never `react` or `silent`, and
+`detect_ms` is populated in exactly one of them. Its only durable trace is
+`runs.result`. Anyone building an operational dashboard on `turn_metrics`, which
+is the obvious table for it, gets a view in which the messages qm chose not to
+answer do not exist.
 
 The other ambient. `ambientEnabled` and the org-wide ambient switch in
 `src/api/app-ambient.ts` govern a *different* mechanism — a judged sweep over
