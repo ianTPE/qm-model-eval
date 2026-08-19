@@ -25,10 +25,9 @@ The gap this targets is an agent that answers *"Done — your reminder is set fo
 output shows it.
 
 Every task drives the direct path — an explicit prompt to the model the scope is
-pinned to. Slack has a second path that a different model gates, which nothing
-here exercises; see [the path this harness does not
-measure](#the-path-this-harness-does-not-measure) before reading a pass as
-broader than it is.
+pinned to. Slack has a second path that a different model gates; `ambient-reply.mjs`
+covers it, and is scored separately for that reason — see [the ambient
+path](#the-ambient-path-a-different-model-decides-whether-you-get-an-answer).
 
 ## Setup
 
@@ -97,6 +96,11 @@ its own scope rather than aiming at a live channel.
 | `memory.mjs` | remember a fact | that it landed in this scope, and did **not** land org-wide |
 | `memory-clobber.mjs` | remember a second fact, keep the first | whether the first survived |
 | `standing-order-clobber.mjs` | add a channel standing order, keep the existing one | same, over real Slack |
+| `ambient-reply.mjs` | answer a question qm asked, in-thread, with no `@`-mention | whether the turn came back `ok`, or was dropped at the gate as `react`/`silent` |
+
+`ambient-reply.mjs` is scored differently from the rest and belongs to whoever
+sets the **org** model, not the channel model — see [the ambient
+path](#the-ambient-path-a-different-model-decides-whether-you-get-an-answer).
 
 `EVAL_LANG=zh` sends the same request in Traditional Chinese. Tool descriptions
 stay English either way, so this measures whether the cross-language gap costs
@@ -304,6 +308,13 @@ They are the reason to distrust a clean-looking result — including these.
 9. **Sampling "which model ran" before its rows landed.** Read 8s after the
    write, it showed only the screen's model — and produced a public claim that
    nine of twelve runs had silently run on the org default. They had not.
+10. **Scoring a run whose setup never happened.** `ambient-reply.mjs` needs qm
+   to ask a question before anything can answer it. On its very first run the
+   security screen quarantined that setup, so the task posted an answer into a
+   thread containing nothing but a refusal — and the gate declined it, correctly.
+   Reported `FAIL`. The task now aborts as `INCONCLUSIVE` when the setup is
+   quarantined or when qm never asks. Written by the person who wrote this list,
+   on the first run of the task built to avoid exactly this.
 
 Traps 4 and 6 are really one mistake seen from both sides: a task that reads
 existing state has *two* histories to control, and cleaning one desynchronises
@@ -316,12 +327,14 @@ so English always went first against a clean channel and Chinese always followed
 nine turns of history — every apparent language effect on a state-reading task
 was confounded with transcript depth.
 
-Six of the nine point the same way: environment, timing and probe problems get
-charged to the model. None ever made a bad model look good. When a measurement
-breaks, "this model is weak" is the cheapest available explanation, and it needs
-no further evidence to feel finished.
+Seven of the ten point the same way: environment, timing, probe and setup
+problems get charged to the model. None ever made a bad model look good. When a
+measurement breaks, "this model is weak" is the cheapest available explanation,
+and it needs no further evidence to feel finished. Trap 10 is the clearest case
+that knowing this does not stop it — the list was already written when it
+happened.
 
-## The path this harness does not measure
+## The ambient path: a different model decides whether you get an answer
 
 Every task here posts to `/v1/turns` with an explicit prompt. That is the direct
 path: qm hands the text to the model the scope is pinned to, and what comes back
@@ -383,12 +396,49 @@ different model makes that call. Two consequences worth carrying:
 - **`@`-mentioning qm skips the gate entirely.** For any hand-off you actually
   depend on, that is the difference between one probabilistic decision and two.
 
-Extending the battery to cover this means driving Slack rather than `/v1/turns`
-— posting an unmentioned thread reply under a question qm asked, and checking
-whether a turn produces a reply rather than a reaction. `standing-order-clobber.mjs`
-already reads Slack replies out of `channel_messages` and is the closest
-starting point. I have not built it; the tasks here would need a real workspace
-to run at all, which is a heavier dependency than the rest of the repo carries.
+### Measuring it
+
+`ambient-reply.mjs` drives the path end to end, over real Slack:
+
+```sh
+node tasks/ambient-reply.mjs claude claude-sonnet-5        # ambient — no mention
+EVAL_MENTION=1 node tasks/ambient-reply.mjs claude claude-sonnet-5   # control
+```
+
+It posts a mentioned message asking qm to put a question to the room and report
+the answer back, waits for qm to actually ask, then answers in that thread
+**without a mention** — the exact shape qm's own message invites. It scores the
+turn's stored status rather than the Slack transcript, because that is the only
+thing that separates the three outcomes:
+
+| status | meaning |
+|---|---|
+| `ok` | the gate passed it through and the pinned model answered |
+| `react` | the gate declined and left an emoji |
+| `silent` | the gate declined and left nothing at all |
+
+Reading Slack alone cannot tell `react` and `silent` apart from a model that ran
+and chose to say nothing, which is why the earlier incident was so hard to see.
+
+`EVAL_MENTION=1` runs the identical exchange with the mention restored, which
+skips the gate. The contrast is the measurement — a run where both forms return
+`ok` shows nothing, and should be repeated rather than reported.
+
+Two guards matter, and both were added after the first run got them wrong.
+The security screen quarantines a share of Slack requests, and a quarantined
+setup leaves a thread whose only bot message is the refusal; answering into it
+gets declined *correctly*, and the first version of this task scored that as a
+gate failure. It now reports `INCONCLUSIVE`, as it does when qm replies without
+actually asking anything. That is trap 1 from the list above, reproduced by the
+person who wrote the list, on the first run of the task written to avoid it.
+
+The other ambient. `ambientEnabled` and the org-wide ambient switch in
+`src/api/app-ambient.ts` govern a *different* mechanism — a judged sweep over
+channel messages, driven by standing orders and bot policies, which defaults off
+when a channel has neither. The thread-follow path this task measures is in
+`src/slack/events.ts` and does not consult either setting. The incident happened
+in a channel with no standing order, where that first mechanism was switched
+off, and the message was still ingested.
 
 ## If you only run one
 
