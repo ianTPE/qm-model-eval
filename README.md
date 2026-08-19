@@ -228,12 +228,24 @@ infrastructure, possibly different quantisation, and a different answer to where
 the data goes. If you intend to run one, that is exactly the case for pointing
 this harness at it first.
 
-The spread across models that behave identically is roughly 25× on input and
-25× on output. `gpt-5.6-luna` is the cheapest by a wide margin but takes the
-most model calls per turn, which claws some of it back; `deepseek-v4-flash` is
-close behind on price with fewer calls and a faster turn. Speed does not follow
-price either — `claude-sonnet-5` is the fastest in the set at 8s and sits in the
-middle of it.
+Across the nine models that passed every task, list prices span roughly 25× on
+input and 25× on output, and none of the four tasks separates them. That is the
+finding worth carrying, and it is stronger than "the cheap ones are also fine":
+on the work qm actually asks of a model, 25× buys nothing this harness can
+measure.
+
+Calls per turn changes that arithmetic without overturning it. Price × measured
+calls puts the effective input cost of a turn between about $0.51
+(`deepseek-v4-flash` off-peak, 2.3 calls) and about $14 (`gpt-5.6-sol`, 2.8
+calls) — still better than an order of magnitude, so the spread survives the
+correction. Where it does bite is at the cheap end: `gpt-5.6-luna` has the lowest
+list price in the set and also the highest call count, and at 3.1 calls it lands
+level with or behind `deepseek-v4-flash`, which is nominally dearer. Compare on
+price × calls, not on price.
+
+Speed follows neither. `claude-sonnet-5` is the fastest here at 8s and sits
+mid-table on cost, while `qwen3.8-max` is ten times the input price of
+`gpt-5.6-luna` and two and a half times slower.
 
 Two findings that are about qm rather than any model:
 
