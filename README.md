@@ -24,6 +24,12 @@ The gap this targets is an agent that answers *"Done — your reminder is set fo
 20 minutes from now"* when no cron was ever created. When the two disagree, the
 output shows it.
 
+Every task drives the direct path — an explicit prompt to the model the scope is
+pinned to. Slack has a second path that a different model gates, which nothing
+here exercises; see [the path this harness does not
+measure](#the-path-this-harness-does-not-measure) before reading a pass as
+broader than it is.
+
 ## Setup
 
 Node 20+, and shell access to the deployment's postgres.
@@ -314,6 +320,75 @@ Six of the nine point the same way: environment, timing and probe problems get
 charged to the model. None ever made a bad model look good. When a measurement
 breaks, "this model is weak" is the cheapest available explanation, and it needs
 no further evidence to feel finished.
+
+## The path this harness does not measure
+
+Every task here posts to `/v1/turns` with an explicit prompt. That is the direct
+path: qm hands the text to the model the scope is pinned to, and what comes back
+is what this harness scores.
+
+In Slack there is a second path, and a model that passes everything above can
+still fail on it — because on that path the model you pinned is not the one that
+decides anything.
+
+A message that does **not** `@`-mention qm is marked *ambient*
+(`src/core/orchestrator.ts:398`) and routed through an extra model call before
+any work happens (`:1540`). If that call returns `respond: false`, the turn ends
+at `:1565` with an emoji reaction or nothing at all. The call runs on
+`judgeModelId` — an auxiliary model, not the scope's. So the model an admin
+evaluated and selected governs the answer, and a different one governs whether
+there is an answer.
+
+The gate also fails closed in two ways. `pi-harness.ts:188` tells it *"When
+genuinely unsure, prefer NO."* And in `claude-harness.ts:896` a failed detection
+call is caught and turned into `return { respond: false }` — a provider hiccup
+becomes a decision not to reply, indistinguishable from a considered one.
+
+### What that looked like in practice
+
+Not a benchmark, one live scenario, but it is the failure this gap produces.
+A colleague asked qm to chase someone and report back within the hour. qm posted
+the question in a channel thread and committed to reporting. The reply arrived
+in that thread 73 minutes later, without an `@`-mention — which is what qm's own
+message had asked for ("just reply in this thread"). Postgres shows the message
+was ingested (`handled = t`) and the turn returned:
+
+```json
+{"status":"react","reactions":["+1"]}
+```
+
+qm read the answer to its own question, gave it a thumbs-up, and never reported.
+Forty-two minutes later, asked about it in a DM — a different session — it
+stated with a reconstructed timeline that no reply had come, in the thread or
+anywhere else. The person who had answered was implicitly reported as
+unresponsive and had to come back and say so.
+
+The detection prompt already covers the case explicitly, twice
+(`pi-harness.ts:140` and `:159`), and ships a near-identical worked example. It
+was not a missing rule. A deterministic condition — *qm asked a question here
+and has no answer recorded* — was delegated to a probabilistic call, and the
+call was wrong. Filed upstream as
+[#607](https://github.com/yc-software/qm/issues/607) and
+[#608](https://github.com/yc-software/qm/issues/608).
+
+### What it means for a result from this repo
+
+A pass here is a statement about the pinned model on the direct path. It is not
+a statement about whether qm will answer an unmentioned message, because a
+different model makes that call. Two consequences worth carrying:
+
+- **Changing a scope's model does not change its ambient behaviour.** If replies
+  go missing in a channel, re-pinning the model will not fix it, and the model
+  is not what to suspect.
+- **`@`-mentioning qm skips the gate entirely.** For any hand-off you actually
+  depend on, that is the difference between one probabilistic decision and two.
+
+Extending the battery to cover this means driving Slack rather than `/v1/turns`
+— posting an unmentioned thread reply under a question qm asked, and checking
+whether a turn produces a reply rather than a reaction. `standing-order-clobber.mjs`
+already reads Slack replies out of `channel_messages` and is the closest
+starting point. I have not built it; the tasks here would need a real workspace
+to run at all, which is a heavier dependency than the rest of the repo carries.
 
 ## If you only run one
 
