@@ -146,17 +146,32 @@ const answered = await slack("chat.postMessage", {
 });
 if (!answered.ok) throw new Error(`postMessage failed: ${answered.error}`);
 
-await quiesce(15_000, 240_000);
-
 // Step 4. Read the turn's own verdict. `react` and `silent` are what the gate
 // returns when it decides not to respond; `ok` means the pinned model ran.
 // Reading the reply text alone cannot tell those apart from a model that ran
 // and chose to say nothing.
-const raw = psql(
-  `SELECT coalesce(result,'') FROM runs
-   WHERE session_id=${q(`ch:${CHANNEL}:${threadTs}`)} AND created_at >= ${beforeAnswer}
-   ORDER BY created_at DESC LIMIT 1;`,
-);
+//
+// Wait on the run row itself, not on `quiesce()`. quiesce watches
+// `session_llm_requests`, and a turn the gate declines may never write a row
+// there — the detection call is recorded only in an in-memory ring, so the
+// judge is invisible in the durable record. On the first clean run that made
+// quiesce report "idle" 15s after the answer was posted, before the run row
+// existed, and the task printed `(no run)` for a turn that had come back
+// `react`. The harness's own idle detector is blind to exactly the turns this
+// task exists to catch.
+let raw = "";
+{
+  const deadline = Date.now() + 300_000;
+  while (Date.now() < deadline) {
+    await sleep(5_000);
+    raw = psql(
+      `SELECT coalesce(result,'') FROM runs
+       WHERE session_id=${q(`ch:${CHANNEL}:${threadTs}`)} AND created_at >= ${beforeAnswer}
+       ORDER BY created_at DESC LIMIT 1;`,
+    );
+    if (raw) break;
+  }
+}
 let status = "(no run)";
 try {
   if (raw) status = JSON.parse(raw).status ?? "(no status)";

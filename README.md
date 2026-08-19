@@ -315,6 +315,15 @@ They are the reason to distrust a clean-looking result — including these.
    Reported `FAIL`. The task now aborts as `INCONCLUSIVE` when the setup is
    quarantined or when qm never asks. Written by the person who wrote this list,
    on the first run of the task built to avoid exactly this.
+11. **Waiting with an instrument blind to what you're measuring.** `quiesce()`
+   decides the deployment is idle by watching `session_llm_requests` stop
+   growing. A turn the ambient gate declines may write no row there at all — the
+   detection call goes to an in-memory ring and never reaches the table — so
+   quiesce declared idle 15s after the probe was posted, before the run row
+   existed, and the task printed `(no run)`. The verdict it fell through to was
+   still `FAIL`, and the true stored status was `react`, also a failure. Right
+   answer, wrong reason, and nothing in the output said so. `ambient-reply.mjs`
+   now waits on the run row itself.
 
 Traps 4 and 6 are really one mistake seen from both sides: a task that reads
 existing state has *two* histories to control, and cleaning one desynchronises
@@ -327,12 +336,14 @@ so English always went first against a clean channel and Chinese always followed
 nine turns of history — every apparent language effect on a state-reading task
 was confounded with transcript depth.
 
-Seven of the ten point the same way: environment, timing, probe and setup
+Seven of the eleven point the same way: environment, timing, probe and setup
 problems get charged to the model. None ever made a bad model look good. When a
 measurement breaks, "this model is weak" is the cheapest available explanation,
-and it needs no further evidence to feel finished. Trap 10 is the clearest case
-that knowing this does not stop it — the list was already written when it
-happened.
+and it needs no further evidence to feel finished. Traps 10 and 11 are the
+clearest cases that knowing this does not stop it: both happened on the first
+runs of a task written to avoid them, with the list already sitting above.
+Trap 11 is the one worth re-reading — it produced the right verdict for the
+wrong reason, which is the failure mode no result table can show you.
 
 ## The ambient path: a different model decides whether you get an answer
 
@@ -431,6 +442,13 @@ gets declined *correctly*, and the first version of this task scored that as a
 gate failure. It now reports `INCONCLUSIVE`, as it does when qm replies without
 actually asking anything. That is trap 1 from the list above, reproduced by the
 person who wrote the list, on the first run of the task written to avoid it.
+
+The wait condition is the other one, and it is worth copying if you write
+anything against this path. `quiesce()` cannot be used here: it infers idleness
+from `session_llm_requests`, and a turn the gate declines can write nothing
+there, so it reports idle before the run row exists. The task waits on the run
+row for the thread instead. Traps 10 and 11 below have the detail; both were
+found by running this task, not by reading the code.
 
 The other ambient. `ambientEnabled` and the org-wide ambient switch in
 `src/api/app-ambient.ts` govern a *different* mechanism — a judged sweep over
