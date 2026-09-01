@@ -205,30 +205,70 @@ second.
 
 ### What they cost
 
-List prices as of August 2026, USD per million tokens, alongside what this
-deployment measured. `calls` is the mean number of model calls one turn took —
-a real multiplier on the token price, and the closest cost signal available,
-because qm keeps no token counts you can read. Input tokens are captured per
-call but held in a 1,000-entry in-memory ring that a restart drops; output
-tokens are never measured at all.
+> **Correction, 2026-09-02.** This section previously said qm keeps no token
+> counts you can read, that input tokens live only in an in-memory ring, and that
+> output tokens are never measured — and used `calls/turn` as a cost proxy on
+> that basis. All of it was false, and the table below is measured instead. See
+> [trap 13](#what-the-measurements-got-wrong-along-the-way) for how the claim
+> survived as long as it did, which is the part worth reading.
 
-| model | input | output | calls/turn | median turn |
-|---|---|---|---|---|
-| `gpt-5.6-luna` | $0.20 | $1.20 | 3.1 | 14.0s |
-| `deepseek-v4-flash` | $0.22–0.44 | $0.66–1.32 | 2.3 | 12.2s |
-| `deepseek-v4-pro` | $0.66–1.32 | $1.98–3.96 | 2.3 | 15.4s |
-| `claude-sonnet-5` | $2 | $10 | 2.2 | 8.0s |
-| `qwen3.8-max` | $2 | $6 | 2.5 | 36.1s |
-| `gpt-5.6-terra` | $2 | $12 | 2.3 | 10.0s |
-| `kimi-k3` | $3 | $15 | 2.2 | 28.3s |
-| `claude-opus-5` | $5 | $25 | 2.3 | 9.6s |
-| `gpt-5.6-sol` | $5 | $30 | 2.8 | 16.7s |
+qm records what every turn spent. `recordLlmRequest` writes `input`, `output`,
+`cacheRead`, `cacheWrite` and `totalTokens` per call into
+`session_llm_requests.usage_json`, and has since before the first run here.
+
+Tokens below are means per turn, measured; dollars are computed outside qm from
+list prices as of August 2026. The query is [`tools/usage.sql`](tools/usage.sql)
+and the pricing is [`tools/cost.mjs`](tools/cost.mjs), so both halves are
+re-runnable and the price assumptions are readable rather than implied.
+
+| model | turns | input | cacheWrite | cacheRead | output | USD/turn | USD/passing run |
+|---|---|---|---|---|---|---|---|
+| `gpt-5.6-luna` | 37 | 9 | 10,311 | 21,135 | 127 | $0.0026 | $0.0026 |
+| `deepseek-v4-flash` | 47 | 8,628 | 0 | 19,105 | 583 | $0.0027–$0.0054 | $0.0027–$0.0054 |
+| `claude-haiku-4-5` | 33 | 18 | 5,255 | 26,752 | 5 | $0.0093 | $0.019 |
+| `kimi-k3` | 39 | 1,795 | 0 | 22,147 | 250 | $0.016 | $0.016 |
+| `deepseek-v4-pro` | 31 | 8,720 | 0 | 18,985 | 471 | $0.0079–$0.016 | $0.0079–$0.016 |
+| `claude-sonnet-5` | 40 | 4 | 5,563 | 32,396 | 13 | $0.021 | $0.021 |
+| `gpt-5.6-terra` | 39 | 7 | 9,884 | 12,270 | 105 | $0.023 | $0.023 |
+| `qwen3.8-max` | 41 | 2,842 | 0 | 28,088 | 1,303 | $0.036 * | $0.036 |
+| `claude-opus-5` | 42 | 4 | 6,130 | 28,471 | 11 | $0.053 | $0.053 |
+| `gpt-5.6-sol` | 45 | 8 | 10,350 | 17,688 | 178 | $0.066 | $0.066 |
+| `glm-5.3` | 24 | 2,408 | 0 | 25,267 | 96 | — | — |
+| `openrouter/auto` | 24 | 9,408 | 0 | 9,845 | 155 | — | — |
+
+**`cacheWrite: 0` is not "no caching."** It is a different caching architecture,
+and reading the `input` column across providers without knowing that inverts the
+answer. Anthropic and OpenAI cache on client direction, so tokens entering the
+cache are reported separately and billed separately — Anthropic at 1.25× input
+for a write and 0.1× for a read. DeepSeek, Moonshot, DashScope and Z.ai cache
+server-side on a prefix match: a miss is reported in `input` at the ordinary rate
+and there is no write to bill. Structurally, `deepseek-v4-flash`'s input of 8,628
+sits where `claude-sonnet-5`'s `input + cacheWrite` of 5,567 sits. Comparing the
+raw `input` columns would say deepseek sends the larger prompt. It does not.
+
+**The bill is mostly cache reads** — between half and nine-tenths of every turn,
+across all twelve. For a small team the cost decision is a prompt-caching-policy
+decision before it is a model-price decision, and `qm`'s own cache boundary moves
+that number more than the choice between two adjacent models does.
+
+`USD/passing run` is `USD/turn` divided by the model's scheduling pass rate out of
+six. It matters for exactly three rows. `claude-haiku-4-5` is the second-cheapest
+model here per turn and still burns a full 32k-token turn on each Chinese prompt
+it silently fails, so its real price doubles. `glm-5.3` fails at the same rate and
+`openrouter/auto` worse, and both are unpriced, so the column cannot show what
+they would cost — which is its own answer. The cheapest model is not the cheapest
+row; it is the cheapest row that passes.
+
+Two rows are unpriced on purpose. `openrouter/auto` picks a model per request
+while qm records only the alias, so there is no rate to apply — the same
+unattributability that disqualified it above. For `glm-5.3` I have no list price
+I am willing to state.
 
 The DeepSeek ranges are off-peak to peak — the API halves its rates outside
 01:00–04:00 and 06:00–10:00 UTC, which is worth knowing if your background work
-runs on crons you control. Claude prices are what the API charges; this
-deployment ran the Claude models on a subscription instead, where the marginal
-cost of a turn is zero until the plan's limit.
+runs on crons you control. The Claude rows are what the API would charge; this
+deployment ran them on a subscription, where the marginal cost of a turn is zero
+until the plan's limit.
 
 DeepSeek's weights are open, and third-party hosts on OpenRouter serve
 `deepseek-v4-flash` from about $0.07/$0.17 — a further 4x under the official
@@ -238,24 +278,42 @@ infrastructure, possibly different quantisation, and a different answer to where
 the data goes. If you intend to run one, that is exactly the case for pointing
 this harness at it first.
 
-Across the nine models that passed every task, list prices span roughly 25× on
-input and 25× on output, and none of the four tasks separates them. That is the
-finding worth carrying, and it is stronger than "the cheap ones are also fine":
-on the work qm actually asks of a model, 25× buys nothing this harness can
-measure.
+**What the measurement still does not include.** The ambient reply gate runs a
+model call on every un-mentioned message and is handed `recordModelCall` but not
+`recordLlmRequest`, so it leaves no usage row anywhere
+([qm#609](https://github.com/yc-software/qm/issues/609)). No task here goes
+through that path, so these figures are unaffected — but a deployment where
+people talk in threads is paying for it, and cannot see it. Separately, the
+figures are the *evaluated model's* usage, not the platform's: the security
+screen and history compaction run on the org default model and are filtered out
+by the scope∧model condition in `usage.sql`. On this deployment that filter moved
+`claude-opus-5` from 356 turns of 5,640 tokens to 42 turns of 34,616 — most of
+what it was doing in other models' channels was screening their inputs. That is
+real cost, attributable to those turns, and it is not in this table.
 
-Calls per turn changes that arithmetic without overturning it. Price × measured
-calls puts the effective input cost of a turn between about $0.51
-(`deepseek-v4-flash` off-peak, 2.3 calls) and about $14 (`gpt-5.6-sol`, 2.8
-calls) — still better than an order of magnitude, so the spread survives the
-correction. Where it does bite is at the cheap end: `gpt-5.6-luna` has the lowest
-list price in the set and also the highest call count, and at 3.1 calls it lands
-level with or behind `deepseek-v4-flash`, which is nominally dearer. Compare on
-price × calls, not on price.
+Across the ten priced models the spread is about 25× — `gpt-5.6-luna` at
+$0.0026 a turn to `gpt-5.6-sol` at $0.066 — and none of the four tasks separates
+them. That is the finding worth carrying, and it is stronger than "the cheap ones
+are also fine": on the work qm actually asks of a model, 25× buys nothing this
+harness can measure.
+
+The table is ordered by what a turn actually costs, and that is not the order
+list prices imply. `gpt-5.6-sol` and `claude-opus-5` share a $5 input price, but
+sol costs 25% more per turn, because OpenAI bills qm's `cacheWrite` at the full
+input rate while Anthropic's cache read is a tenth of it.
+`claude-sonnet-5` and `gpt-5.6-terra` are within 10% of each other despite terra
+listing at half sonnet's output price. Price per million tokens ranks the
+providers' rate cards; it does not rank what a turn costs you.
+
+`calls/turn` — 2.0 to 3.1 across the set, from `turn_metrics.model_calls` — is
+kept out of this section deliberately. It is a real signal about loop shape and
+latency, and it was never a cost signal: each call re-sends the context, which is
+why cache reads dominate every row above. Using it as a proxy was the mistake in
+the correction at the top.
 
 Speed follows neither. `claude-sonnet-5` is the fastest here at 8s and sits
-mid-table on cost, while `qwen3.8-max` is ten times the input price of
-`gpt-5.6-luna` and two and a half times slower.
+mid-table on cost, while `qwen3.8-max` costs fourteen times what `gpt-5.6-luna`
+does per turn and is two and a half times slower.
 
 Two findings that are about qm rather than any model:
 
@@ -324,6 +382,45 @@ They are the reason to distrust a clean-looking result — including these.
    still `FAIL`, and the true stored status was `react`, also a failure. Right
    answer, wrong reason, and nothing in the output said so. `ambient-reply.mjs`
    now waits on the run row itself.
+12. **Grading the internal status instead of the observable effect.** The first
+   scoring pass on `ambient-reply.mjs` read `runs.result.status` and called
+   anything but `ok` a failure. But `silent` is returned both when the gate
+   declines a turn and when a turn completes and delivers through a surface
+   tool, which is how every ordinary Slack answer comes back
+   ([qm#609](https://github.com/yc-software/qm/issues/609)). So the `@`-mentioned
+   control — the run that worked — was scored `FAIL` with `carries date: yes`
+   printed two lines above it. The verdict is now whether the report arrived
+   carrying the answer; the status stays as the explanation for a failure, never
+   as the test for one.
+13. **Proving an absence from the first recorder I found, then not propagating
+   my own correction.** This section previously justified `calls/turn` as a cost
+   proxy with the claim that qm keeps no readable token counts. I had found
+   `recordModelCall` — an in-memory ring, capped at 1,000, input tokens only —
+   verified it, and generalised to the system. There is a second path,
+   `recordLlmRequest`, writing full usage to `session_llm_requests.usage_json`,
+   and it had been there since before the first run in this repo. An absence
+   claim is a claim about *every* writer; verifying it means enumerating writers,
+   not reading the one store you already know about.
+
+   That much is an ordinary research error. The part that is not: I found the
+   second path on 2026-08-18 and wrote it into
+   [qm#586](https://github.com/yc-software/qm/issues/586) — *"I charted
+   `model_calls` out of `turn_metrics` as a cost proxy and thought the numbers
+   weren't derivable. They were one table over the whole time."* Then I left the
+   false sentence standing here for two more weeks. The failure was not finding
+   the error; it was publishing the correction in one venue and not auditing the
+   others. Anything asserting an absence has more than one home, and a correction
+   that reaches only the place you happened to be editing is not a correction.
+
+   Two smaller versions of the same thing surfaced while writing this up. I said
+   `turn_metrics` has no token columns — it has `cache_read`, `cache_write` and
+   `uncached_input`, populated on all 637 rows; what it lacks is output tokens and
+   cost, which is what #586 already said precisely. And I attributed a set of
+   duplicate usage rows to the pi harness; all 137 of them are the claude
+   harness's one-shot path
+   ([qm#889](https://github.com/yc-software/qm/issues/889)). Both were stated
+   confidently, from one look, in the middle of writing up a trap about stating
+   things confidently from one look.
 
 Traps 4 and 6 are really one mistake seen from both sides: a task that reads
 existing state has *two* histories to control, and cleaning one desynchronises
@@ -336,7 +433,7 @@ so English always went first against a clean channel and Chinese always followed
 nine turns of history — every apparent language effect on a state-reading task
 was confounded with transcript depth.
 
-Eight of the twelve point the same way: environment, timing, probe and setup
+Eight of the thirteen point the same way: environment, timing, probe and setup
 problems get charged to the model. None ever made a bad model look good. When a
 measurement breaks, "this model is weak" is the cheapest available explanation,
 and it needs no further evidence to feel finished. Traps 10, 11 and 12 are the
@@ -346,6 +443,21 @@ above it. Three consecutive runs, three different instrument faults, before a
 single number in this section was true. 11 and 12 are the pair worth
 re-reading — one produced the right verdict for the wrong reason, the other the
 wrong verdict with the right evidence printed directly above it.
+
+Trap 13 is the one that breaks the pattern, and it is the reason this list is
+worth keeping rather than a nice gesture. The first twelve are all a measurement
+lying to me. The thirteenth is me lying to a reader — a claim about someone
+else's software, published, load-bearing, and false — and it is the only one on
+this list I had already caught, written up, and filed upstream before leaving it
+standing here. Traps you have not yet found are ordinary. A correction you have
+already made, in a place you then failed to look, is not.
+
+### Corrections
+
+| date | what changed |
+|---|---|
+| 2026-09-02 | "What they cost" — the claim that qm keeps no readable token counts was false; the section is rebuilt on measured usage and `calls/turn` is no longer a cost basis. Trap 13. |
+| 2026-09-02 | Trap 12 was referenced by this section's closing paragraph but had never been written. Added. |
 
 ## The ambient path: a different model decides whether you get an answer
 
