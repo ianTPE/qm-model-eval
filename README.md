@@ -203,6 +203,55 @@ latency and where the data lands. And keep in mind the difference between "not
 found wanting" and "verified sound" — the table above is the first, not the
 second.
 
+### What this doesn't cover
+
+**Two languages.** English and Chinese, and that is a narrow claim for software
+people run everywhere. It matters more than a coverage gap usually would, because
+the second language did not just add data — **it changed the verdict.** English
+alone passes `claude-haiku-4-5` 3/3 and this repo would have called it fine.
+Chinese is what exposed it, and what it exposed was not "weaker": a model that
+replies 「建立完成。20 分鐘後會提醒你」and creates no cron. A model that reports
+success while doing nothing is green on every dashboard you have. There is no
+reason to assume Japanese, Korean, Spanish or Arabic are free of their own version
+of that, and nobody has looked.
+
+It is also not evenly bilingual, which is worth stating plainly. Three of the five
+task files take a language — `schedule`, `memory` and `memory-clobber` read `EVAL_LANG`
+and carry both prompts ([`tasks/schedule.mjs:35`](tasks/schedule.mjs)). The other
+two, `standing-order-clobber` and `ambient-reply`, are written in Chinese only and
+have no English form at all.
+
+What makes adding a language cheap anyway is that **no grader depends on the
+language of the reply.** Every check runs against Postgres — did a cron row appear,
+at what time, did the memory line survive, did a turn get dispatched — and the one
+check that does look at reply text (`ambient-reply.mjs:192`) searches for an ASCII
+marker, not prose. So a language is a set of translated prompts and no change to
+the checking. Tool descriptions stay English on purpose, so what is measured is
+whether a cross-language gap costs tool-calling accuracy rather than whether the
+model can read its own tools. If you read a language that isn't here, that is an
+afternoon of prompt-writing, and the results compose with these.
+
+**One deployment, one operator.** Everything here ran against a single
+self-hosted qm on one machine, driven by one person who also wrote the harness.
+The traps section is the honest account of what that costs.
+
+**Four comparison tasks, all state-changing.** Scheduling, memory write, memory
+clobber, and a Slack standing order — chosen because they either happen or they
+don't, which is what makes them gradeable from Postgres. (The fifth task file,
+`ambient-reply`, measures the reply gate rather than the pinned model, and is not
+part of the comparison.) Nothing here measures reasoning
+quality, long-context behaviour, code, or anything where the answer is a matter of
+degree. A model can pass every task here and still be the wrong choice for work
+this repo doesn't touch.
+
+**About twenty-five turns per model.** Enough to catch a model that fails
+outright, not enough to separate models that don't. That is why the results table
+says three failed rather than ranking the nine that didn't.
+
+**The three failures were not pursued.** `claude-haiku-4-5`, `openrouter/auto`
+and `glm-5.3` stop at scheduling. That result already rules them out for this
+purpose, so nothing was learned about how they behave on the other three tasks.
+
 ### What they cost
 
 > **Correction, 2026-09-02.** This section previously said qm keeps no token
