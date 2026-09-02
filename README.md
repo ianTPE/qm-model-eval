@@ -471,6 +471,13 @@ They are the reason to distrust a clean-looking result — including these.
    confidently, from one look, in the middle of writing up a trap about stating
    things confidently from one look.
 
+   A third turned up a week later, writing "What this doesn't cover" above. I
+   claimed every task takes `EVAL_LANG` and that no grader reads the reply, having
+   opened one task file. Two of the five have no language parameter at all and no
+   English form; one grader does read the reply, for an ASCII marker. Caught before
+   publishing — which is the only thing separating it from the twelve entries above
+   it, and not a difference in kind.
+
 Traps 4 and 6 are really one mistake seen from both sides: a task that reads
 existing state has *two* histories to control, and cleaning one desynchronises
 it from the other. The safe shape is a fresh one-shot marker every run, which is
